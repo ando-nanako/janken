@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<script src="js/jquery-2.1.3.min.js"></script>
+<!-- <link rel="stylesheet" href="css/sample.css">古い見た目のファイルを読み込む行。今回はCSSを自分で書くので使わない -->
+<title>じゃんけん</title>
+
+<style>
+    /* 余白や枠線を含めて幅を計算する。レイアウトが崩れにくくなる（*はすべての要素という意味） */
+    * {
+      box-sizing: border-box;
+    }
+
+    /* ===== ページ全体 ===== */
+    body {
+      margin: 0;                /* ブラウザが最初から付ける余白を消す */
+      min-height: 100vh;        /* 高さを最低でも画面いっぱいにする */
+      background: #fff;         /* 背景は白 */
+      color: #222;              /* 文字は黒に近い色 */
+      font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif; /* 左から順に使えるフォントを選ぶ */
+    }
+    main {
+      max-width: 420px;         /* 横幅は最大420px */
+      margin: 0 auto;           /* 上下0、左右は自動で箱を中央に寄せる */
+      padding: 24px 16px;       /* 内側の余白。上下24px、左右16px */
+    }
+    h1 {
+      text-align: center;       /* タイトルを中央揃え */
+      font-size: 28px;          /* 文字の大きさ */
+      margin: 8px 0 20px;       /* 外側の余白。上8px、左右0、下20px */
+    }
+
+    /* ===== 名前とHPの行 ===== */
+    .row {
+      display: flex;                    /* 中身を横に並べる */
+      justify-content: space-between;   /* 名前は左端、HPは右端に離す */
+      align-items: center;              /* 縦の位置を中央に揃える */
+      font-weight: bold;                /* 文字を太くする */
+      margin-top: 12px;                 /* 上の余白 */
+    }
+    .hp {
+      font-size: 22px;          /* ハートの大きさ */
+      letter-spacing: 2px;      /* ハートどうしの間隔 */
+    }
+
+    /* ===== ニワトリのセリフ ===== */
+    #serif {
+      margin-top: 8px;              /* 上の余白 */
+      border: 1px solid #d6d8dd;    /* 太さ1pxの実線で、薄いグレーの枠線を付ける */
+      font-size: 15px;              /* 文字の大きさ */
+      padding: 10px 14px;           /* 枠線と文字の間の余白 */
+    }
+
+    /* ===== あなた VS コンピュータ ===== */
+    .arena {
+      display: flex;                  /* 3つを横に並べる */
+      justify-content: space-around;  /* 周りに均等な余白を取る */
+      align-items: center;            /* 縦の位置を中央に揃える */
+      text-align: center;             /* 文字を中央揃え */
+      margin: 28px 0 8px;             /* 外側の余白。上28px、左右0、下8px */
+    }
+    .hand {
+      font-size: 72px;      /* 手の絵文字を大きくする */
+      line-height: 1.2;     /* 行の高さ。文字の大きさの1.2倍 */
+    }
+    .who {
+      font-size: 12px;      /* 小さい文字 */
+      color: #777;          /* グレー */
+    }
+    .vs {
+      font-size: 20px;
+      font-weight: bold;
+      color: #777;
+    }
+
+    /* ===== 勝ち負けの文字と連勝数 ===== */
+    #judgment {
+      text-align: center;
+      font-size: 36px;
+      font-weight: bold;
+      height: 54px;         /* 高さを固定する。文字が変わっても画面がガタガタしない */
+    }
+    #streak {
+      text-align: center;
+      font-size: 14px;
+      font-weight: bold;
+      color: #e8890c;       /* オレンジ */
+      height: 22px;         /* 空のときも場所を確保する */
+    }
+
+    /* ===== コンピュータの手を揺らす動き ===== */
+    .shake {
+      animation: shake 0.2s infinite;   /* 下のshakeの動きを0.2秒周期でずっと繰り返す */
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateY(0); }    /* 最初と最後は元の位置 */
+      50% { transform: translateY(-10px); }     /* 途中で10px上に動く */
+    }
+
+    /* ===== グー・チョキ・パーのボタン ===== */
+    ul {
+      display: flex;        /* ボタンを横に並べる */
+      gap: 10px;            /* ボタンどうしの間隔 */
+      padding: 0;           /* リストの左の余白を消す */
+      margin: 28px 0 0;     /* 上だけ余白を付ける */
+      list-style: none;     /* リストの黒丸を消す */
+    }
+    li {
+      flex: 1;                  /* 3つのボタンを同じ幅にする */
+      border: 2px solid #222;   /* 黒い枠線 */
+      text-align: center;
+      padding: 12px 0;          /* 上下の内側の余白 */
+      font-weight: bold;
+      cursor: pointer;          /* マウスを乗せると指の形になる */
+      user-select: none;        /* 連続で押しても文字が選択されないようにする */
+    }
+    li:hover {
+      background: #fff4d6;          /* マウスを乗せたときの背景色 */
+    }
+    li:active {
+      transform: translateY(2px);   /* 押している間だけ2px下げて、押した感じを出す */
+    }
+    li span {
+      display: block;       /* 絵文字を1行使う形にして、文字をその下に置く */
+      font-size: 36px;      /* li の中の span（絵文字）だけ大きくする */
+    }
+
+    /* ===== 決着画面 ===== */
+    #end {
+      display: none;        /* 最初は隠す。決着したらJavaScriptで表示する */
+      text-align: center;
+      padding-top: 60px;    /* 上の内側の余白 */
+    }
+    #end_icon {
+      font-size: 72px;      /* 🏆や😢を大きくする */
+    }
+    #end_text {
+      font-size: 40px;
+      font-weight: bold;
+      margin: 8px 0;        /* 上下8px、左右0 */
+    }
+    #end_serif {
+      color: #777;
+    }
+    #again {
+      width: 100%;          /* 横幅いっぱいのボタンにする */
+      margin-top: 48px;
+      border: 0;            /* ボタンの枠線を消す */
+      padding: 16px;
+      background: #222;     /* 背景は黒 */
+      color: #fff;          /* 文字は白 */
+      font: inherit;        /* ボタンのフォントをページと同じにする */
+      font-size: 20px;      /* font: inheritのあとに書いて、大きさだけ変える */
+      font-weight: bold;
+      cursor: pointer;
+    }
+  </style>
+
+</head>
+<body>
+  <!-- mainでページの中心になる部分を囲む -->
+<main>
+  <!-- 一番大きいタイトル -->
+    <h1>じゃんけんバトル</h1>
+  <!-- div idは箱の名前/対戦中に見える画面 -->
+    <div id="battle">
+      <!-- css見た目の指定 -->
+      <!--idは1つでjavaScriptで探す、classは何個でもokでcssで同じ見た目をまとめて付ける.-->
+      <div class="row">
+        <!-- divと異なることろは横に並べられるところ -->
+        <span>🐔 コンピュータ</span>
+        <!-- コンピュータのHP（💗💗💗）を入れる場所。今は空っぽで、JavaScriptがあとでハートを入れる -->
+        <span class="hp" id="pc_hp"></span>
+      </div>
+        <!-- ニワトリのセリフ入れる場所。勝ち負けでjavaScriptが書き換えられる -->
+        <div id="serif">勝負だ！
+      </div>
+        <!-- 「左・VS・右」の3つを、あとでCSSで横並びにするための名前 -->
+        <div class="arena">
+    <div>
+      <!-- 自分が選択した手を表示する。ボタンを押すと書き換えられるように後程JavaScriptを設定 -->
+      <!-- class="hand"は左右どちらの絵文字も同じ大きさにしたいため、classを使う -->
+      <div class="hand" id="my_hand">❔</div>
+      <div class="who">あなた</div>
+    </div>
+    <div class="vs">VS</div>
+    <div>
+      <!-- こっちはコンピューターの手 -->
+      <div class="hand" id="pc_hand">❔</div>
+      <div class="who">コンピュータ</div>
+    </div>
+    </div>
+    <!-- 「勝ち！」「負け…」「あいこ」を表示する場所。最初は「手を選んでね」。元のtplでも使っていた名前 -->
+    <div id="judgment">手を選んでね</div>
+    <!-- 「🔥 2連勝中」を表示する場所。最初は空    -->
+  <div id="streak"></div>
+    <!-- コンピュータの行（20行目）と同じclassなので、見た目も同じになる -->
+  <div class="row">
+    <span>🌿 あなた</span>
+    <!-- 自分のハートを入れる場所。コンピュータは pc_hp、自分は my_hp     -->
+    <span class="hp" id="my_hp"></span>
+  </div>
+  <!--  「リスト（一覧）」の入れ物。中に <li> を並べる   -->
+  <ul>
+    <!-- リストの1項目。今回は1つ1つがボタンの役割          -->
+    <!-- グーのボタンの名札。JavaScriptで「このボタンが押されたら」と指定するのに使う -->
+    <!-- <span>✊</span>絵文字だけを囲む。あとでCSSで絵文字だけ大きくするため -->
+    <li id="gu_btn"><span>✊</span>グー</li>
+    <li id="cho_btn"><span>✌️ </span>チョキ</li>
+    <li id="par_btn"><span>✋</span>パー</li>
+  </ul>
+    </div>
+  <!-- divは箱/決着したときに見える画面-->
+    <div id="end">
+  <!-- id="end_icon" 結果の大きな絵文字   -->
+    <div id="end_icon"></div>
+  <!-- id="end_text" 結果の文字   -->
+    <div id="end_text"></div>
+  <!-- ニワトリの最後のセリフ -->
+    <div id="end_serif"></div>
+  <!-- 最初から遊び直すボタン -->
+  <button id="again">もう一回</button>
+    </div>
+</main>
+
+<header>
+
+</header>
+
+<footer></footer>
+<script>
+  // 自分のHPを入れる箱。ゲーム中に減るのでletを使う
+  let myHp = 3;
+  // コンピュータのHPを入れる箱
+  let pcHp = 3;
+  // 勝負の途中かどうかを入れる箱。最初は勝負していないのでfalse
+    let playing = false;
+
+  // HPの数を受け取って、ハートの文字を作る関数
+  function hearts(hp) {
+    // 空の文字を用意する。ここにハートを足していく
+    let html = "";
+    // iを0、1、2と増やしながら3回繰り返す
+    for (let i = 0; i < 3; i++) {
+      // iがHPより小さいときは、残っているハートを足す
+      if (i < hp) {
+        html += "💗";
+      // それ以外のときは、なくなったハートを足す
+      } else {
+        html += "🤍";
+      }
+    }
+    // できたハートの文字を、呼び出した場所に返す
+    return html;
+  }
+
+  // 2人のハートを画面に表示する関数
+  function showHp() {
+    // 自分のHPをハートにして、id="my_hp"の場所に入れる
+    $("#my_hp").html(hearts(myHp));
+    // コンピュータのHPをハートにして、id="pc_hp"の場所に入れる
+    $("#pc_hp").html(hearts(pcHp));
+  }
+
+  // 関数は作るだけでは動かないので、ここで呼び出す
+  showHp();
+// 数字を手の絵文字に変える関数。1はグー、2はチョキ、3はパー
+  function emoji(n) {
+    if (n == 1) return "✊";
+    if (n == 2) return "✌️ ";
+    // 1でも2でもなければ3なので、パーを返す
+    return "✋";
+  }
+  // 勝ち負けを判定する関数。meは自分の手、pcはコンピュータの手
+  function judge(me, pc) {
+    // 同じ手ならあいこ
+    if (me == pc) return "あいこ";
+    // グーとチョキ、チョキとパー、パーとグーの組み合わせなら勝ち
+    if ((me == 1 && pc == 2) || (me == 2 && pc == 3) || (me == 3 && pc == 1)) return "勝ち";
+    // あいこでも勝ちでもなければ負け
+    return "負け";
+  }
+  // じゃんけんを1回行う関数。meは自分の手の数字
+    function play(me) {
+      // 勝負の途中なら、ここで処理を終わらせる
+      if (playing) return;
+      // 勝負中の状態にする
+      playing = true;
+
+      // 自分の手を絵文字にして表示する
+      $("#my_hand").html(emoji(me));
+      // コンピュータの手をグーにして、揺らす
+      $("#pc_hand").html("✊").addClass("shake");
+      // 文字を「じゃん…」にして、色を黒に戻す
+      $("#judgment").html("じゃん…").css("color", "#222");
+
+      // 0.4秒後に「けん…」に変える
+      setTimeout(function () {
+        $("#judgment").html("けん…");
+      }, 400);
+
+      // 0.8秒後に結果を出す
+      setTimeout(function () {
+        // コンピュータの手を1〜3でランダムに決める
+        const pc = Math.ceil(Math.random() * 3);
+        // 判定の結果を受け取る
+        const result = judge(me, pc);
+
+        // コンピュータの手を表示して、揺れを止める
+        $("#pc_hand").html(emoji(pc)).removeClass("shake");
+        // 結果をid="judgment"の場所に表示する
+        $("#judgment").html(result);
+
+        // 勝ったとき
+        if (result == "勝ち") {
+          pcHp--;
+          $("#judgment").css("color", "#e5484d");
+          $("#serif").html("くっ…つぎは負けないぞ！");
+        // 負けたとき
+        } else if (result == "負け") {
+          myHp--;
+          $("#judgment").css("color", "#3e63dd");
+          $("#serif").html("やったー！ぼくの勝ち！");
+        // あいこのとき
+        } else {
+          $("#judgment").css("color", "#777");
+          $("#serif").html("あいこでしょ！");
+        }
+
+        // 減ったHPに合わせてハートを表示し直す
+        showHp();
+
+        // コンピュータのHPが0なら、あなたの勝ち
+        if (pcHp == 0) {
+          finish("🏆", "あなたの勝ち！", "🐔「まいった…！」");
+        // 自分のHPが0なら、あなたの負け
+        } else if (myHp == 0) {
+          finish("😢", "あなたの負け…", "🐔「ぼくの勝ちだね！」");
+        // まだ決着していなければ、次の手を選べるようにする
+        } else {
+          playing = false;
+        }
+      }, 800);
+    }
+
+    // 決着画面を表示する関数。絵文字、結果の文字、セリフを受け取る
+    function finish(icon, text, serif) {
+      // 1秒待ってから決着画面に切り替える
+      setTimeout(function () {
+        // 受け取った内容を決着画面に入れる
+        $("#end_icon").html(icon);
+        $("#end_text").html(text);
+        $("#end_serif").html(serif);
+        // 対戦画面を隠して、決着画面を表示する
+        $("#battle").hide();
+        $("#end").show();
+      }, 1000);
+    }
+  // グーが押されたら、1を渡してplayを動かす
+  $("#gu_btn").on("click", function () {
+    play(1);
+  });
+
+  // チョキが押されたら、2を渡してplayを動かす
+  $("#cho_btn").on("click", function () {
+    play(2);
+  });
+
+  // パーが押されたら、3を渡してplayを動かす
+  $("#par_btn").on("click", function () {
+    play(3);
+  });
+ // 「もう一回」が押されたら、全部を最初の状態に戻す
+    $("#again").on("click", function () {
+      // HPを3に戻す
+      myHp = 3;
+      pcHp = 3;
+      // もう一度ボタンを押せるようにする
+        playing = false;
+      // 手の表示を❔に戻す
+      $("#my_hand").html("❔");
+      $("#pc_hand").html("❔");
+      // 文字と色を最初の状態に戻す
+      $("#judgment").html("手を選んでね").css("color", "#222");
+      // セリフを最初に戻す
+      $("#serif").html("勝負だ！");
+      // ハートを表示し直す
+      showHp();
+      // 決着画面を隠して、対戦画面を表示する
+      $("#end").hide();
+      $("#battle").show();
+    });
+</script>
+</body>
+</html>
